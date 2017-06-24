@@ -8,14 +8,28 @@ import com.google.maps.model.AddressComponentType;
 import com.google.maps.model.AddressType;
 import com.google.maps.model.GeocodingResult;
 
+import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
+
+@Component
 public class GoogleMapsAddressValidator {
-	private static final String API_KEY = "AIzaSyAfSGUAZLPORv9x8bHrMB14mu6qhhWr0co";
+	
+	
+	@Value("${google.api.key}")
+	private String googleApiKey;
+	
 	private static final String OBLAST = "область";
 
 	
-	public static AddressValidationResult validate(FacilityStreetCoverage facilityStreetCoverage) {
+	public AddressValidationResult validate(FacilityStreetCoverage facilityStreetCoverage) {
 		AddressValidationResult result = new AddressValidationResult();
-		GeoApiContext context = new GeoApiContext().setApiKey(API_KEY);
+		GeoApiContext context = new GeoApiContext().setApiKey(googleApiKey);
 		try {
 			GeocodingResult[] results = GeocodingApi.geocode(context, generateAddress(facilityStreetCoverage)).custom("language","Uk").await();
 			
@@ -24,7 +38,7 @@ public class GoogleMapsAddressValidator {
 					if (addressComponent.types[0] == AddressComponentType.ROUTE) {
 						result.setReturnedStreetName(addressComponent.longName);
 						System.out.println("returned street -"+result.getReturnedStreetName());
-						if ((facilityStreetCoverage.getStreetType()+" "+facilityStreetCoverage.getStreet()).equals(result.getReturnedStreetName()) || (facilityStreetCoverage.getStreet()+" "+facilityStreetCoverage.getStreetType()).equals(result.getReturnedStreetName())) result.setMatch(true);
+						if (streetNameMatch(facilityStreetCoverage,result.getReturnedStreetName())) result.setMatch(true);
 						System.out.println("match: "+ result.isMatch());
 						
 					}
@@ -49,6 +63,10 @@ public class GoogleMapsAddressValidator {
 		result += facilityStreetCoverage.getLocality() + ", " + facilityStreetCoverage.getStreetType() +" "+facilityStreetCoverage.getStreet() + ", " + facilityStreetCoverage.getIndex();
 		System.out.println(result);
 		return result;
+	}
+	private static boolean streetNameMatch(FacilityStreetCoverage coverage, String returnedStreetName) {
+		if ((coverage.getStreetType()+" "+coverage.getStreet()).trim().equals(returnedStreetName.trim()) || (coverage.getStreet()+" "+coverage.getStreetType()).trim().equals(returnedStreetName.trim())) return true;
+		else return false;
 	}
 
 }

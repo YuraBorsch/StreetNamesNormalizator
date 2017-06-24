@@ -20,6 +20,8 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 
 @Component
 public class ExcelReader {
@@ -31,6 +33,9 @@ public class ExcelReader {
 	private static final String R_N = "р-н";
 	private static final int TOP_INDENT = 16;
 	private static final int OBLAST_ROW = 6;
+	
+	@Autowired
+	GoogleMapsAddressValidator googleMapsAddressValidator;
 	
 
 	public List<FacilityStreetCoverage> readXls(String filepath) {
@@ -112,7 +117,7 @@ public class ExcelReader {
 					
 					if (!coverage.isAllStreetsCoverage()) {
 						// validate  the address
-						AddressValidationResult valResult = GoogleMapsAddressValidator.validate(coverage);
+						AddressValidationResult valResult = googleMapsAddressValidator.validate(coverage);
 						// write match result
 						Cell cellMatch = currentRow.getCell(10);
 						if(cellMatch == null) cellMatch = currentRow.createCell(10);
