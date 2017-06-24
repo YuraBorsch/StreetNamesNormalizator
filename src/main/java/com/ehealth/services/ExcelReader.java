@@ -1,4 +1,4 @@
-package com.ehealth;
+package com.ehealth.services;
 
 import org.apache.commons.codec.binary.StringUtils;
 import org.apache.poi.hssf.usermodel.HSSFCellStyle;
@@ -19,26 +19,21 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.springframework.stereotype.Component;
+
+@Component
 public class ExcelReader {
 
-	private static final String INPUT_FILE_NAME = "/Users/ypmacc/Downloads/test5.xlsx";
+	//private static final String INPUT_FILE_NAME = "c/Downloads/test5.xlsx";
 	private static final String COVERS_ALL_STREETS = "Структурний підрозділ обслуговує всі адреси цього населеного пункту";
 	private static final String STREET_WASNT_FOUND ="вулицю не знайдено";
 	private static final String RAYON = "район";
 	private static final String R_N = "р-н";
 	private static final int TOP_INDENT = 16;
 	private static final int OBLAST_ROW = 6;
+	
 
-	public static void main(String[] args) {
-
-		List<FacilityStreetCoverage> results = readXls(INPUT_FILE_NAME);
-			
-		/*for (FacilityStreetCoverage coverage: results) {
-			if (!coverage.isAllStreetsCoverage()) GoogleMapsAddressValidator.validate(coverage);
-		}*/
-
-	}
-	public static List<FacilityStreetCoverage> readXls(String filepath) {
+	public List<FacilityStreetCoverage> readXls(String filepath) {
 		List<FacilityStreetCoverage> results = new ArrayList<FacilityStreetCoverage>();
 		Workbook workbook = null;
 		try {
@@ -148,7 +143,7 @@ public class ExcelReader {
 		} finally {
 			// write to the file
 			try {
-				FileOutputStream outFile = new FileOutputStream(getResultFileName(INPUT_FILE_NAME));
+				FileOutputStream outFile = new FileOutputStream(getResultFileName(filepath));
 		        if (workbook!=null) {
 		        	workbook.write(outFile);
 		        	workbook.close();
@@ -180,8 +175,9 @@ public class ExcelReader {
 	private static String getResultFileName(String inputFileName) {
 		String filename = Paths.get(inputFileName).getFileName().toString().replaceFirst("[.][^.]+$", "") +"_RESULTS.xlsx";;
 		//String filename = p.getFileName().toString().replaceFirst("[.][^.]+$", "") +"_RESULTS.xlsx";
-		String path = (new File(INPUT_FILE_NAME)).getParent();
+		String path = (new File(inputFileName)).getParent();
 		return Paths.get(path,filename).toString();
 	}
+	
 
 }

@@ -1,4 +1,4 @@
-package com.ehealth;
+package com.ehealth.services;
 
 import com.ehealth.entities.*;
 import com.google.maps.GeoApiContext;

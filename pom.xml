@@ -5,7 +5,22 @@
 	<artifactId>RedRegistryNormalizator</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>1.5.2.RELEASE</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+
 	<dependencies>
+	    <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+         </dependency>
+         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
 		<dependency>
 			<groupId>org.apache.poi</groupId>
 			<artifactId>poi-ooxml</artifactId>
@@ -17,4 +32,14 @@
 			<version>0.1.18</version>
 		</dependency>
 	</dependencies>
+	
+	<build>
+        <plugins>
+            <!-- Package as an executable jar/war -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 </project>
