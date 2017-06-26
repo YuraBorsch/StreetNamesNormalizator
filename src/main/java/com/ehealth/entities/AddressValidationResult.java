@@ -6,7 +6,7 @@ public class AddressValidationResult {
 	private FacilityStreetCoverage facilityStreetCoverage;
 	private GeocodingResult[] mapsAPIResults;
 	private String returnedStreetName;
-	private boolean match;
+	private StreetNameMatchType matchType;
 	private String error;
 	
 	public String getError() {
@@ -33,11 +33,11 @@ public class AddressValidationResult {
 	public void setReturnedStreetName(String returnedStreetName) {
 		this.returnedStreetName = returnedStreetName;
 	}
-	public boolean isMatch() {
-		return match;
+	public StreetNameMatchType getMatchType() {
+		return matchType;
 	}
-	public void setMatch(boolean match) {
-		this.match = match;
+	public void setMatchType(StreetNameMatchType matchType) {
+		this.matchType = matchType;
 	}
 
 	

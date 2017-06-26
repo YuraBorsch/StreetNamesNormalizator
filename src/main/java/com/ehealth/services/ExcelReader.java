@@ -7,6 +7,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import com.ehealth.entities.AddressValidationResult;
 import com.ehealth.entities.FacilityStreetCoverage;
+import com.ehealth.entities.StreetNameMatchType;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -22,20 +23,49 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import javax.annotation.PostConstruct;
 
 @Component
 public class ExcelReader {
 
-	//private static final String INPUT_FILE_NAME = "c/Downloads/test5.xlsx";
 	private static final String COVERS_ALL_STREETS = "Структурний підрозділ обслуговує всі адреси цього населеного пункту";
 	private static final String STREET_WASNT_FOUND ="вулицю не знайдено";
 	private static final String RAYON = "район";
 	private static final String R_N = "р-н";
-	private static final int TOP_INDENT = 16;
-	private static final int OBLAST_ROW = 6;
+	
+	
+	@Value("${document.structure.topIndent}")
+	private int topIndent;
+	
+	@Value("${document.structure.oblastRow}")
+	private int oblastRow;
+	
+	
+	@Value("${document.structure.fullNameCell}")
+	private int fullNameCell;
+	
+	@Value("${document.structure.divisionNameCell}")
+	private int divisionNameCell;
+	
+	@Value("${document.structure.rayonCell}")
+	private int rayonCell;
+	
+	@Value("${document.structure.localityCell}")
+	private int localityCell;
+	
+	@Value("${document.structure.indexCell}")
+	private int indexCell;
+	
+	@Value("${document.structure.streetTypeCell}")
+	private int streetTypeCell;
+
+	@Value("${document.structure.streetCell}")
+	private int streetCell;
 	
 	@Autowired
 	GoogleMapsAddressValidator googleMapsAddressValidator;
+
+
 	
 
 	public List<FacilityStreetCoverage> readXls(String filepath) {
@@ -48,70 +78,26 @@ public class ExcelReader {
 			Sheet datatypeSheet = workbook.getSheetAt(0);
 			Iterator<Row> iterator = datatypeSheet.iterator();
 			
-			CellStyle redStyle = workbook.createCellStyle();
-			redStyle.setFillForegroundColor(IndexedColors.RED.getIndex());
-			//redStyle.setFillPattern(CellStyle.ALIGN_FILL);
-			redStyle.setFillPattern(CellStyle.SOLID_FOREGROUND);
+			// initialize styles
+			CellStyle redStyle = createCellStyle(workbook,IndexedColors.RED);	
+			CellStyle greenStyle = createCellStyle(workbook,IndexedColors.GREEN);	
+			CellStyle yellowStyle = createCellStyle(workbook,IndexedColors.YELLOW);	
 			
-			
-			CellStyle greenStyle = workbook.createCellStyle();
-			greenStyle.setFillForegroundColor(IndexedColors.GREEN.getIndex());
-			//greenStyle.setFillPattern(CellStyle.ALIGN_FILL);
-			greenStyle.setFillPattern(CellStyle.SOLID_FOREGROUND);
-
 
 			String oblast=null;	
 			while (iterator.hasNext() ) {
 
 				Row currentRow = iterator.next();
 				// check if table ended
-				if (isRowEmpty(currentRow) && currentRow.getRowNum() >= TOP_INDENT) break;
+				if (isRowEmpty(currentRow) && currentRow.getRowNum() >= topIndent) break;
 				// get the oblast
-				if (currentRow.getRowNum()==OBLAST_ROW) {
+				if (currentRow.getRowNum()==oblastRow ) {
 					oblast = currentRow.getCell(0).getStringCellValue();
 				}
 				//process the row
-				if (currentRow.getRowNum() >= TOP_INDENT) {
-					FacilityStreetCoverage coverage = new FacilityStreetCoverage();
+				if (currentRow.getRowNum() >= topIndent) {
 
-					if(currentRow.getCell(0).getCellTypeEnum() == CellType.STRING) { 
-						String fullName = currentRow.getCell(0).getStringCellValue();
-						coverage.setFullName(fullName);
-						System.out.println("full name : " + fullName); 
-					} 
-					if(currentRow.getCell(1).getCellTypeEnum() == CellType.STRING)  { 
-						String divisionName = currentRow.getCell(1).getStringCellValue();
-						coverage.setDivisionName(divisionName);
-						System.out.println("division :" + divisionName);
-					}
-					if(currentRow.getCell(2).getCellTypeEnum() == CellType.STRING)  { 
-						String rayon = currentRow.getCell(2).getStringCellValue();
-						if (rayon.contains(RAYON) || rayon.contains(R_N)) coverage.setRayon(rayon);
-						System.out.println("rayon :" + rayon);
-					}
-					if(currentRow.getCell(4).getCellTypeEnum() == CellType.STRING)  { 
-						String locality = currentRow.getCell(4).getStringCellValue();
-						coverage.setLocality(locality);
-						System.out.println("locality :" + locality);
-					}
-					if(currentRow.getCell(5).getCellTypeEnum() == CellType.NUMERIC)  { 
-						String index = Integer.toString((int)currentRow.getCell(5).getNumericCellValue());
-						coverage.setIndex(index);
-						System.out.println("index :" + index);
-					}
-					if(currentRow.getCell(6).getCellTypeEnum() == CellType.STRING)  { 
-						String streetType = currentRow.getCell(6).getStringCellValue();
-						coverage.setStreetType(streetType);
-						if (streetType.equals(COVERS_ALL_STREETS)) coverage.setAllStreetsCoverage(true);
-						System.out.println("street type:" + streetType + "; covers all streets:" + coverage.isAllStreetsCoverage());
-					}
-
-					if(currentRow.getCell(7).getCellTypeEnum() == CellType.STRING && !coverage.isAllStreetsCoverage())  { 
-						String street = currentRow.getCell(7).getStringCellValue();
-						coverage.setStreet(street);
-						System.out.println("street :" + street);
-					}
-					
+					FacilityStreetCoverage coverage = parseCoverageFromRow(currentRow);
 					// set the oblast
 					if (oblast!=null) coverage.setOblast(oblast);
 					
@@ -119,18 +105,24 @@ public class ExcelReader {
 						// validate  the address
 						AddressValidationResult valResult = googleMapsAddressValidator.validate(coverage);
 						// write match result
+						// initialize cells
 						Cell cellMatch = currentRow.getCell(10);
 						if(cellMatch == null) cellMatch = currentRow.createCell(10);
-						cellMatch.setCellValue(valResult.isMatch());
-						if (valResult.isMatch()) cellMatch.setCellStyle(greenStyle); else cellMatch.setCellStyle(redStyle);
-						
 						Cell cellStreet = currentRow.getCell(11);
 						if(cellStreet == null) cellStreet = currentRow.createCell(11);
-						if (valResult.getReturnedStreetName()==null || valResult.getReturnedStreetName().isEmpty()) {
-							cellStreet.setCellValue(STREET_WASNT_FOUND);
+						if (valResult.getMatchType()!=null) cellMatch.setCellValue(valResult.getMatchType().toString());
+						if (valResult.getReturnedStreetName()!=null) cellStreet.setCellValue(valResult.getReturnedStreetName());
+						System.out.println(valResult.getMatchType());
+						switch (valResult.getMatchType()) {
+					    	case FULL: cellMatch.setCellStyle(greenStyle);
+					    	    break;
+					    	case PARTIAL: cellMatch.setCellStyle(yellowStyle);
+					        	break;
+					    	case NOT_MATCHED: cellMatch.setCellStyle(redStyle);
+				        		break;
+					    	case MISSING: cellMatch.setCellStyle(redStyle);
+			        			break;
 						}
-						else cellStreet.setCellValue(valResult.getReturnedStreetName());
-						if (valResult.isMatch()) cellStreet.setCellStyle(greenStyle); else cellStreet.setCellStyle(redStyle);
 					}
 					
 					
@@ -161,7 +153,7 @@ public class ExcelReader {
 		return results;
 	}
 	
-	public static boolean isRowEmpty(Row row) {
+	private static boolean isRowEmpty(Row row) {
 		if (row == null) {
 	        return true;
 	    }
@@ -179,10 +171,63 @@ public class ExcelReader {
 	
 	private static String getResultFileName(String inputFileName) {
 		String filename = Paths.get(inputFileName).getFileName().toString().replaceFirst("[.][^.]+$", "") +"_RESULTS.xlsx";;
-		//String filename = p.getFileName().toString().replaceFirst("[.][^.]+$", "") +"_RESULTS.xlsx";
 		String path = (new File(inputFileName)).getParent();
 		return Paths.get(path,filename).toString();
 	}
 	
+	/*@PostConstruct
+    protected void checkConfiguration() {
+        
+    }*/
+	
+	private static CellStyle createCellStyle(Workbook workbook, IndexedColors color) {
+		CellStyle style = workbook.createCellStyle();
+		style.setFillForegroundColor(color.getIndex());
+		style.setFillPattern(CellStyle.SOLID_FOREGROUND);
+		return style;
+	}
+	
+	private FacilityStreetCoverage parseCoverageFromRow(Row currentRow) {
+		FacilityStreetCoverage coverage = new FacilityStreetCoverage();
+
+		if(currentRow.getCell(0).getCellTypeEnum() == CellType.STRING) { 
+			String fullName = currentRow.getCell(fullNameCell).getStringCellValue();
+			coverage.setFullName(fullName);
+			System.out.println("full name : " + fullName); 
+		} 
+		if(currentRow.getCell(1).getCellTypeEnum() == CellType.STRING)  { 
+			String divisionName = currentRow.getCell(divisionNameCell).getStringCellValue();
+			coverage.setDivisionName(divisionName);
+			System.out.println("division :" + divisionName);
+		}
+		if(currentRow.getCell(2).getCellTypeEnum() == CellType.STRING)  { 
+			String rayon = currentRow.getCell(rayonCell).getStringCellValue();
+			if (rayon.contains(RAYON) || rayon.contains(R_N)) coverage.setRayon(rayon);
+			System.out.println("rayon :" + rayon);
+		}
+		if(currentRow.getCell(4).getCellTypeEnum() == CellType.STRING)  { 
+			String locality = currentRow.getCell(localityCell).getStringCellValue();
+			coverage.setLocality(locality);
+			System.out.println("locality :" + locality);
+		}
+		if(currentRow.getCell(5).getCellTypeEnum() == CellType.NUMERIC)  { 
+			String index = Integer.toString((int)currentRow.getCell(indexCell).getNumericCellValue());
+			coverage.setIndex(index);
+			System.out.println("index :" + index);
+		}
+		if(currentRow.getCell(6).getCellTypeEnum() == CellType.STRING)  { 
+			String streetType = currentRow.getCell(streetTypeCell).getStringCellValue();
+			coverage.setStreetType(streetType);
+			if (streetType.equals(COVERS_ALL_STREETS)) coverage.setAllStreetsCoverage(true);
+			System.out.println("street type:" + streetType + "; covers all streets:" + coverage.isAllStreetsCoverage());
+		}
+
+		if(currentRow.getCell(7).getCellTypeEnum() == CellType.STRING && !coverage.isAllStreetsCoverage())  { 
+			String street = currentRow.getCell(streetCell).getStringCellValue();
+			coverage.setStreet(street);
+			System.out.println("street :" + street);
+		}
+		return coverage;
+	}
 
 }
