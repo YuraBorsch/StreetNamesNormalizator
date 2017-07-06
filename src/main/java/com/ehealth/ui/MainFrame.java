@@ -130,9 +130,7 @@ public class MainFrame extends javax.swing.JFrame {
             		// excelReader.readXls(file.getName());
             		processFile(file.getAbsolutePath());
             	}
-            } else {
-                //log.append("Open command cancelled by user." + newline);
-            }
+            } 
         }
  
     }//GEN-LAST:event_jButton1ActionPerformed
