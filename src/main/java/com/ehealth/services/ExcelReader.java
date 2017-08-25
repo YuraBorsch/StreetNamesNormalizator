@@ -2,12 +2,14 @@ package com.ehealth.services;
 
 import org.apache.commons.codec.binary.StringUtils;
 import org.apache.poi.hssf.usermodel.HSSFCellStyle;
+import org.apache.poi.openxml4j.exceptions.NotOfficeXmlFileException;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import com.ehealth.entities.AddressValidationResult;
 import com.ehealth.entities.FacilityStreetCoverage;
 import com.ehealth.entities.StreetNameMatchType;
+import com.ehealth.ui.MainFrame;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -17,6 +19,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -64,8 +67,11 @@ public class ExcelReader {
 	
 	@Autowired
 	GoogleMapsAddressValidator googleMapsAddressValidator;
+	
+    @Autowired
+    private MainFrame frame;
 
-
+	private String blockSeparator = String.join("", Collections.nCopies(40, "-"));
 	
 
 	public List<FacilityStreetCoverage> readXls(String filepath) {
@@ -100,11 +106,16 @@ public class ExcelReader {
 					FacilityStreetCoverage coverage = parseCoverageFromRow(currentRow);
 					// set the oblast
 					if (oblast!=null) coverage.setOblast(oblast);
+					// write coverage info to app UI
+					writeCoverageInfo(coverage);
 					
 					if (!coverage.isAllStreetsCoverage()) {
 						// validate  the address
 						AddressValidationResult valResult = googleMapsAddressValidator.validate(coverage);
-						// write match result
+						// write validation result to app UI
+						writeValidationResult(valResult);
+						
+						// update row with match results
 						// initialize cells
 						Cell cellMatch = currentRow.getCell(10);
 						if(cellMatch == null) cellMatch = currentRow.createCell(10);
@@ -134,20 +145,22 @@ public class ExcelReader {
 
 
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+			notify(e.getMessage());
+		} catch (NotOfficeXmlFileException e) {
+			notify(e.getMessage());
 		} catch (IOException e) {
-			e.printStackTrace();
+			notify(e.getMessage());
 		} finally {
 			// write to the file
 			try {
-				FileOutputStream outFile = new FileOutputStream(getResultFileName(filepath));
 		        if (workbook!=null) {
+		        	FileOutputStream outFile = new FileOutputStream(getResultFileName(filepath));
 		        	workbook.write(outFile);
 		        	workbook.close();
-				}
-		        outFile.close(); 
+		        	outFile.close();
+				}		         
 	        } catch (IOException e) {
-				e.printStackTrace();
+	        	notify("Помилка запису файлу");
 	        }
 		}
 		return results;
@@ -169,16 +182,12 @@ public class ExcelReader {
 	    return true;
 	}
 	
+	
 	private static String getResultFileName(String inputFileName) {
 		String filename = Paths.get(inputFileName).getFileName().toString().replaceFirst("[.][^.]+$", "") +"_RESULTS.xlsx";;
 		String path = (new File(inputFileName)).getParent();
 		return Paths.get(path,filename).toString();
 	}
-	
-	/*@PostConstruct
-    protected void checkConfiguration() {
-        
-    }*/
 	
 	private static CellStyle createCellStyle(Workbook workbook, IndexedColors color) {
 		CellStyle style = workbook.createCellStyle();
@@ -189,45 +198,63 @@ public class ExcelReader {
 	
 	private FacilityStreetCoverage parseCoverageFromRow(Row currentRow) {
 		FacilityStreetCoverage coverage = new FacilityStreetCoverage();
-
-		if(currentRow.getCell(0).getCellTypeEnum() == CellType.STRING) { 
+		
+		if(currentRow.getCell(fullNameCell).getCellTypeEnum() == CellType.STRING) { 
 			String fullName = currentRow.getCell(fullNameCell).getStringCellValue();
 			coverage.setFullName(fullName);
-			System.out.println("full name : " + fullName); 
 		} 
-		if(currentRow.getCell(1).getCellTypeEnum() == CellType.STRING)  { 
+		if(currentRow.getCell(divisionNameCell).getCellTypeEnum() == CellType.STRING)  { 
 			String divisionName = currentRow.getCell(divisionNameCell).getStringCellValue();
 			coverage.setDivisionName(divisionName);
-			System.out.println("division :" + divisionName);
 		}
-		if(currentRow.getCell(2).getCellTypeEnum() == CellType.STRING)  { 
+		if(currentRow.getCell(rayonCell).getCellTypeEnum() == CellType.STRING)  { 
 			String rayon = currentRow.getCell(rayonCell).getStringCellValue();
 			if (rayon.contains(RAYON) || rayon.contains(R_N)) coverage.setRayon(rayon);
-			System.out.println("rayon :" + rayon);
 		}
-		if(currentRow.getCell(4).getCellTypeEnum() == CellType.STRING)  { 
+		if(currentRow.getCell(localityCell).getCellTypeEnum() == CellType.STRING)  { 
 			String locality = currentRow.getCell(localityCell).getStringCellValue();
 			coverage.setLocality(locality);
-			System.out.println("locality :" + locality);
 		}
-		if(currentRow.getCell(5).getCellTypeEnum() == CellType.NUMERIC)  { 
+		if(currentRow.getCell(indexCell).getCellTypeEnum() == CellType.NUMERIC)  { 
 			String index = Integer.toString((int)currentRow.getCell(indexCell).getNumericCellValue());
 			coverage.setIndex(index);
-			System.out.println("index :" + index);
+		} else if(currentRow.getCell(indexCell).getCellTypeEnum() == CellType.STRING)  { 
+			String index = currentRow.getCell(indexCell).getStringCellValue();
+			coverage.setIndex(index);
 		}
-		if(currentRow.getCell(6).getCellTypeEnum() == CellType.STRING)  { 
+		if(currentRow.getCell(streetTypeCell).getCellTypeEnum() == CellType.STRING)  { 
 			String streetType = currentRow.getCell(streetTypeCell).getStringCellValue();
 			coverage.setStreetType(streetType);
 			if (streetType.equals(COVERS_ALL_STREETS)) coverage.setAllStreetsCoverage(true);
-			System.out.println("street type:" + streetType + "; covers all streets:" + coverage.isAllStreetsCoverage());
 		}
 
-		if(currentRow.getCell(7).getCellTypeEnum() == CellType.STRING && !coverage.isAllStreetsCoverage())  { 
+		if(currentRow.getCell(streetCell).getCellTypeEnum() == CellType.STRING && !coverage.isAllStreetsCoverage())  { 
 			String street = currentRow.getCell(streetCell).getStringCellValue();
 			coverage.setStreet(street);
-			System.out.println("street :" + street);
 		}
 		return coverage;
+	}
+	
+	private void writeLine(String line) {
+		frame.addLine(line);
+	}
+	private void notify(String message) {
+		frame.showDialog(message);
+	}
+	
+	private void writeCoverageInfo(FacilityStreetCoverage coverage) {
+		
+		writeLine(blockSeparator);
+	    writeLine("Заклад : " + coverage.getFullName()+"; Підрозділ :" + coverage.getDivisionName()); 
+		writeLine("Район :" + coverage.getRayon()+"; Населений пункт :" + coverage.getLocality()+"; Індекс :" + coverage.getIndex());
+
+		writeLine("Тип вулиці:" + coverage.getStreetType() + "; Обслуговує усі вулиці:" + coverage.isAllStreetsCoverage());
+		if (coverage.getStreet()!=null) writeLine("Назва :" + coverage.getStreet());
+	}
+	
+	private void writeValidationResult(AddressValidationResult valResult) {
+		writeLine("Повернуто Google: "+valResult.getReturnedStreetName());
+		writeLine("Результат: "+valResult.getMatchType());
 	}
 
 }

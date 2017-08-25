@@ -5,7 +5,9 @@ import java.io.File;
 
 import javax.annotation.PostConstruct;
 import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
 import javax.swing.SwingWorker;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -35,6 +37,8 @@ public class MainFrame extends javax.swing.JFrame {
 
 	@Value("${application.ui.title}")
 	private String applicationTitle;
+	
+	private static String buttonText="Вибрати";
 	
 	
 	/**
@@ -75,7 +79,7 @@ public class MainFrame extends javax.swing.JFrame {
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
 
-        jButton1.setText("Close");
+        jButton1.setText(buttonText);
         jButton1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton1ActionPerformed(evt);
@@ -83,10 +87,10 @@ public class MainFrame extends javax.swing.JFrame {
         });
 
         jTextArea1.setEditable(false);
-        jTextArea1.setColumns(40);
+        jTextArea1.setColumns(80);
         jTextArea1.setLineWrap(true);
         jTextArea1.setRows(20);
-        jTextArea1.setText("This is a demonstration on how to write a simple Spring Boot application to display a GUI interface.");
+        jTextArea1.setText("");
         jTextArea1.setWrapStyleWord(true);
         jScrollPane1.setViewportView(jTextArea1);
 
@@ -97,7 +101,7 @@ public class MainFrame extends javax.swing.JFrame {
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 328, Short.MAX_VALUE)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 628, Short.MAX_VALUE)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                         .addGap(0, 0, Short.MAX_VALUE)
                         .addComponent(jButton1)))
@@ -119,6 +123,8 @@ public class MainFrame extends javax.swing.JFrame {
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
     	//Handle open button action.
         if (evt.getSource() == jButton1) {
+        	FileNameExtensionFilter filter = new FileNameExtensionFilter("EXCEL FILES", "xls", "xlsx");
+        	fileChooser.setFileFilter(filter);
             int returnVal = fileChooser.showOpenDialog(MainFrame.this);
 
             if (returnVal == JFileChooser.APPROVE_OPTION) {
@@ -185,8 +191,6 @@ public class MainFrame extends javax.swing.JFrame {
                 // Disable the button
                 jButton1.setEnabled(false);
                
-                System.out.println("doInBackground()");
-               
                 // Save the text as saving
                 // This text is not mostly seen, because
                 // the process is done so faster, that the
@@ -223,9 +227,8 @@ public class MainFrame extends javax.swing.JFrame {
             // done() runs in the EDT
             protected void done()
             {
-                System.out.println("done()");
                 jButton1.setEnabled(true);
-                jButton1.setText("Close");
+                jButton1.setText(buttonText);
                 // The get() method throws various exceptions
                 // More on it in the post page
                 /*try
@@ -259,6 +262,13 @@ public class MainFrame extends javax.swing.JFrame {
     	
     	
     }
+    
+    public void addLine(String line) {
+    	jTextArea1.setText(jTextArea1.getText()+System.getProperty("line.separator")+line);
+    }
+	public void showDialog(String message) {
+		JOptionPane.showMessageDialog(this, message);
+	}
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButton1;

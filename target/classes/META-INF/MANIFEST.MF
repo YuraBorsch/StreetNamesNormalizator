@@ -1,7 +1,7 @@
 Manifest-Version: 1.0
 Implementation-Title: RedRegistryNormalizator
 Implementation-Version: 0.0.1-SNAPSHOT
-Built-By: user
+Built-By: ypmacc
 Implementation-Vendor-Id: com.ehealth
 Build-Jdk: 1.8.0_111
 Implementation-URL: http://projects.spring.io/spring-boot/RedRegistryN
